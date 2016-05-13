@@ -1,42 +1,87 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import praw
+import sys
+import operator
+import re
 import time
-import login
+import praw
 
 # Login to reddit.
+import login
 r = login.login()
 
-# Define words to match in an array.
-words_to_match = ["i"]
 # A cache for comments that have already been responded to.
 cache = []
 # Log to write to.
 #log = open("./log")
 
 
-def run_bot():
+import collections
+def parse():
+    search_terms = collections.namedtuple("Terms", ['title', 'comments'])
+    st = search_terms
+
+    for argument in sys.argv[1:]:
+        if argument.startswith("t:"):
+            st.title = re.compile(argument[2:])
+        elif argument.startswith("c:"):
+            st.comments = re.compile(argument[2:])
+        else:
+            print("wtf am i reading, use arguments properly.")
+            sys.exit()
+
+    #print(st.title, st.comments)
+    return st
+
+
+def run_scan(match):
     # Count duplicate posts.
     duplicate = 0
 
+    # Get top 30 posts from all.
     subreddit = r.get_subreddit("all")
-    posts = subreddit.get_hot(limit=100)
+    submissions = subreddit.get_hot(limit=1)
 
-    for post in posts:
-        if post.id in cache:
+    # For each post, put the id in a cache and then scan it.
+    for submission in submissions:
+        print("Getting submission, submission id: " + submission.id + "...")
+        if submission.id in cache:
+            # Count duplicates, alternatively just use parse here.
+            # TODO, heat up when there is less duplicates each time?
             duplicate += 1
         else:
-            cache.append(post.id)
-            for item in words_to_match:
-                if item in post.title:
-                    print("found one: " + post.title)
-    print("Duplicate posts this scan: " + str(duplicate))
-    duplicate = 0
+            # Now it has been read, send to cache.
+            cache.append(submission.id)
+            # All comments.
+            submission.replace_more_comments(limit=None, threshold=0)
+            # Flatten the comment tree, we don't care.
+            flat = praw.helpers.flatten_tree(submission.comments)
 
-runs = 1
-while True:
-    run_bot() # Run the bot!
-    time.sleep(10) # Not too often…
-    print("Number of scans: " + str(runs))
-    runs += 1
+            # For each comment in the flat tree.
+            print("Submission got, submission id: " + submission.id + "\n" + "Scanning...")
+            for comment in flat:
+                comment = str(comment.body).lower()
+                #print (comment)
+                if match.comments.match(comment):
+                    print (comment)
+                    print("found it!")
+
+    print("Duplicate posts this scan: " + str(duplicate))
+
+
+def main():
+    runs = 1
+    search = parse()
+
+    while True:
+        run_scan(search)
+        print("Number of scans: " + str(runs))
+        time.sleep(200)
+        runs += 1
+
+
+if __name__ == "__main__":
+    main()
+
+#log.close()
