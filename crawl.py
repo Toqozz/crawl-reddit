@@ -76,7 +76,6 @@ def make_index(data):
     html.close()
 
 def main():
-    make_index("hello")
     runs = 1
     search = parse()
 
