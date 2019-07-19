@@ -8,7 +8,7 @@ For instance, one can search for the string "Australia" in post titles, and post
 
 There are two versions of crawl in this repository.  One version uses the Reddit praw API, and the other uses pycurl to scrape directly from the website.
 
-The benefit to the curl approach is that it doesn't require an OAuth module, and it's generalyl a little bit faster.
+The benefit to the curl approach is that it doesn't require an OAuth module, and it's generally a little bit faster.
 
 I recommend generally sticking to `crawl_curl.py`.
 
